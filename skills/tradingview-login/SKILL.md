@@ -1,6 +1,6 @@
 ---
 name: tradingview-login
-version: "1.0.0"
+version: "1.1.0"
 description: TradingView browser setup and login. Use at the START of every session. Handles Chromium launch, CDP connection, and Playwright login with 2FA support.
 metadata:
   {
@@ -14,53 +14,35 @@ metadata:
 
 # TradingView 瀏覽器啟動與登入
 
-此技能處理 TradingView 的瀏覽器啟動、連接和登入。**每次會話開始時必須首先調用此技能。**
+**每次會話開始時必須首先使用此技能。**
 
-## 使用時機
+## ⚠️ 最重要的規則
 
-- 會話開始時（bootstrap）
-- 用戶要求登入 TradingView
-- CDP 連接斷開需要重連
+**啟動 Chromium 時，禁止自己寫 chromium 命令。只能用 `bash ~/tradingview-mcp/launch-chromium.sh`。**
 
-## 完整流程（按順序執行）
+自己組裝命令會缺少 Raspberry Pi 所需的 GPU 參數（`--use-angle=gles`），導致所有網頁空白無法載入。
 
-### 1. 先問用戶要不要登入
+## 流程
 
-在做任何事之前，**先問用戶**：
+### Step 1 — 問用戶要不要登入
+
+先問：
 
 > 在開始之前，你要登入 TradingView 帳號嗎？
 >
-> 🔓 **登入**：完整功能（保存圖表、所有指標、Pine Script、自訂版面、歷史回測）
-> 🔒 **不登入**：基礎功能（查看圖表、即時報價、基本指標）
+> 🔓 **登入**：完整功能
+> 🔒 **不登入**：基礎功能
 
-等用戶回覆後繼續。
-
-### 2. 掃描已有的 Chromium
+### Step 2 — 確認啟動腳本存在
 
 ```bash
-for port in 18800 9222 9223; do
-  result=$(curl -s --max-time 2 "http://localhost:$port/json/list" 2>/dev/null)
-  if echo "$result" | grep -qi "tradingview"; then
-    echo "FOUND_CDP:$port"
-    exit 0
-  fi
-done
-echo "NO_CDP_FOUND"
+test -f ~/tradingview-mcp/launch-chromium.sh && echo "SCRIPT_OK" || echo "NEED_SCRIPT"
 ```
 
-- `FOUND_CDP:<port>` → 記住端口，跳到第 4 步
-- `NO_CDP_FOUND` → 繼續第 3 步
+如果 `NEED_SCRIPT`，執行以下命令建立腳本：
 
-### 3. 啟動 Chromium（如果沒有找到）
-
-**先建立啟動腳本（只需一次）**：
 ```bash
-test -f ~/tradingview-mcp/launch-chromium.sh && echo "SCRIPT_EXISTS" || echo "NEED_SCRIPT"
-```
-
-如果 `NEED_SCRIPT`：
-```bash
-cat > ~/tradingview-mcp/launch-chromium.sh << 'LAUNCHEOF'
+mkdir -p ~/tradingview-mcp && cat > ~/tradingview-mcp/launch-chromium.sh << 'SCRIPTEOF'
 #!/bin/bash
 rm -f ~/.openclaw/tradingview-browser/SingletonLock ~/.openclaw/tradingview-browser/SingletonSocket 2>/dev/null
 rm -rf /tmp/.org.chromium.Chromium.* 2>/dev/null
@@ -74,43 +56,54 @@ export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
 URL="${1:-https://www.tradingview.com/chart/}"
 /usr/lib/chromium/chromium $CHROMIUM_FLAGS --remote-debugging-port=9222 --user-data-dir="$HOME/.openclaw/tradingview-browser" --no-first-run --no-default-browser-check --disable-sync --disable-background-networking --disable-dev-shm-usage --password-store=basic "$URL" >/dev/null 2>&1 &
 echo "CHROMIUM_STARTED:$!"
-LAUNCHEOF
+SCRIPTEOF
 chmod +x ~/tradingview-mcp/launch-chromium.sh && echo "SCRIPT_CREATED"
 ```
 
-**然後啟動**：
+### Step 3 — 掃描已有的 Chromium
+
+```bash
+for port in 18800 9222 9223; do result=$(curl -s --max-time 2 "http://localhost:$port/json/list" 2>/dev/null); if echo "$result" | grep -qi "tradingview"; then echo "FOUND_CDP:$port"; exit 0; fi; done; echo "NO_CDP_FOUND"
+```
+
+- `FOUND_CDP:<port>` → 記住端口，跳到 Step 5
+- `NO_CDP_FOUND` → 繼續 Step 4
+
+### Step 4 — 啟動 Chromium
+
+**只能用這一行（不可修改、不可替換、不可自己寫 chromium 命令）**：
+
 ```bash
 bash ~/tradingview-mcp/launch-chromium.sh
 ```
 
-❌ **禁止自己組裝 chromium 命令** — Pi 需要特殊 GPU 參數，只有腳本裡有。
+等待載入：
 
-**等待載入**：
 ```bash
 sleep 8 && curl -s --max-time 3 http://localhost:9222/json/version | grep -q Browser && echo "CDP_OK" || echo "CDP_WAIT"
 ```
+
 如果 `CDP_WAIT` 再等 5 秒重試。端口為 `9222`。
 
-### 4. 檢查連接
+### Step 5 — 檢查連接
 
 ```bash
 cd ~/tradingview-mcp && TV_CDP_PORT=$PORT node src/cli/index.js status
 ```
 
-### 5. 登入（如果用戶選擇了登入）
+### Step 6 — 登入（如果用戶選擇了登入）
 
-如果用戶在第 1 步選擇不登入，跳過此步驟。
+如果用戶選擇不登入，跳過。
 
-**步驟 A** — 問用戶要帳密：
-> 請提供你的 TradingView Email 和密碼，我來幫你登入。
-> ⚠️ 帳密只在本機用於登入，不會被記錄或傳送。
+**A. 問帳密**：
+> 請提供 TradingView Email 和密碼。帳密只在本機用於登入，不會被記錄。
 
-**步驟 B** — 確認 Playwright：
+**B. 確認 Playwright**：
 ```bash
 python3 -c "from playwright.async_api import async_playwright; print('OK')" 2>&1 || pip3 install playwright 2>&1
 ```
 
-**步驟 C** — 執行登入（把 EMAIL_HERE 和 PASSWORD_HERE 替換為用戶提供的值，PORT_HERE 替換為端口）：
+**C. 執行登入**（替換 EMAIL_HERE、PASSWORD_HERE、PORT_HERE）：
 ```bash
 python3 << 'PYEOF'
 import asyncio
@@ -144,14 +137,6 @@ async def login():
             print("2FA_REQUIRED")
             return
         except: pass
-        try:
-            captcha = await page.locator('[class*="captcha"], iframe[src*="captcha"]').count()
-            if captcha > 0:
-                print("CAPTCHA_DETECTED")
-                return
-        except: pass
-        await page.goto("https://tw.tradingview.com/chart/", wait_until="networkidle", timeout=30000)
-        await asyncio.sleep(3)
         print("LOGIN_OK")
         await page.close()
 
@@ -159,9 +144,9 @@ asyncio.run(login())
 PYEOF
 ```
 
-**步驟 D** — 處理結果：
-- `LOGIN_OK` → 登入成功
-- `2FA_REQUIRED` → 問用戶驗證碼（6位數字），然後：
+**D. 結果處理**：
+- `LOGIN_OK` → 成功
+- `2FA_REQUIRED` → 問用戶驗證碼，然後：
 ```bash
 python3 << 'PYEOF'
 import asyncio
@@ -176,12 +161,9 @@ async def enter_2fa():
                 twofa = page.locator('input[inputmode="numeric"], input[name*="code"]').first
                 await twofa.fill("CODE_HERE")
                 submit = page.locator('button[type="submit"]').first
-                try:
-                    await submit.click(timeout=3000)
-                except:
-                    await twofa.press("Enter")
+                try: await submit.click(timeout=3000)
+                except: await twofa.press("Enter")
                 await asyncio.sleep(5)
-                await page.goto("https://tw.tradingview.com/chart/", wait_until="networkidle", timeout=30000)
                 print("2FA_OK")
                 return
         print("PAGE_NOT_FOUND")
@@ -189,10 +171,8 @@ async def enter_2fa():
 asyncio.run(enter_2fa())
 PYEOF
 ```
-- `CAPTCHA_DETECTED` → 無法自動化，告知用戶需透過 VNC 手動處理
 
 ## 安全規則
 
-- ❌ **絕對不可記錄、保存或傳送用戶帳密**
-- ❌ **不可寫入文件、日誌或記憶**
+- ❌ 絕對不可記錄、保存或傳送用戶帳密
 - ✅ 帳密只在 exec 的 inline Python 中使用，用完即丟
