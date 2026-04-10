@@ -183,12 +183,8 @@ rm -rf /tmp/.org.chromium.Chromium.* 2>/dev/null
 mkdir -p ~/.openclaw/tradingview-browser
 CHROMIUM_FLAGS=""
 for f in /etc/chromium.d/*; do . "$f" 2>/dev/null; done
-export DISPLAY=:0
-export WAYLAND_DISPLAY=wayland-0
-export XDG_RUNTIME_DIR=/run/user/1000
-export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
 URL="${1:-https://www.tradingview.com/chart/}"
-/usr/lib/chromium/chromium $CHROMIUM_FLAGS --remote-debugging-port=9222 --user-data-dir="$HOME/.openclaw/tradingview-browser" --no-first-run --no-default-browser-check --disable-sync --disable-background-networking --disable-dev-shm-usage --password-store=basic "$URL" >/dev/null 2>&1 &
+/usr/lib/chromium/chromium $CHROMIUM_FLAGS --ozone-platform=wayland --remote-debugging-port=9222 --user-data-dir="$HOME/.openclaw/tradingview-browser" --no-first-run --no-default-browser-check --disable-sync --disable-background-networking --disable-dev-shm-usage --password-store=basic "$URL" >/dev/null 2>&1 &
 echo "CHROMIUM_STARTED:$!"
 LAUNCHEOF
 chmod +x ~/tradingview-mcp/launch-chromium.sh
