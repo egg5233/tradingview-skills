@@ -51,6 +51,18 @@ sleep 8 && bash ~/tradingview-mcp/check-login.sh
 cd ~ && git clone --depth 1 https://github.com/tradesdontlie/tradingview-mcp.git && cd tradingview-mcp && npm install --production
 ```
 
+設定系統 Wayland 渲染（需要 sudo，只需一次）：
+```bash
+test -f /etc/chromium.d/99-ozone-wayland && echo "OZONE_OK" || echo "NEED_OZONE"
+```
+
+如果 `NEED_OZONE`：
+```bash
+sudo bash -c 'echo "export CHROMIUM_FLAGS=\"\$CHROMIUM_FLAGS --ozone-platform=wayland\"" > /etc/chromium.d/99-ozone-wayland'
+```
+
+這會確保 Chromium 在 Raspberry Pi 上正確使用 Wayland 渲染，否則網頁會空白。
+
 然後建立腳本：
 ```bash
 curl -sL https://raw.githubusercontent.com/egg5233/tradingview-skills/main/scripts/setup.sh | bash

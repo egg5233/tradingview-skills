@@ -1,6 +1,19 @@
 #!/bin/bash
 # Setup scripts for TradingView agent on Raspberry Pi
 
+# Ensure Wayland ozone-platform is in system Chromium flags
+if [ ! -f /etc/chromium.d/99-ozone-wayland ]; then
+  echo "Setting up Wayland rendering for Chromium..."
+  sudo bash -c 'echo "export CHROMIUM_FLAGS=\"\$CHROMIUM_FLAGS --ozone-platform=wayland\"" > /etc/chromium.d/99-ozone-wayland' 2>/dev/null
+  if [ $? -eq 0 ]; then
+    echo "✅ Wayland ozone-platform configured"
+  else
+    echo "⚠️ Could not write to /etc/chromium.d/ (need sudo). Chromium may not render correctly."
+  fi
+else
+  echo "✅ Wayland ozone-platform already configured"
+fi
+
 echo "Creating launch-chromium.sh..."
 cat > ~/tradingview-mcp/launch-chromium.sh << 'LAUNCHEOF'
 #!/bin/bash
