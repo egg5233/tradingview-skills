@@ -71,7 +71,7 @@ After=graphical-session.target
 Type=simple
 ExecStartPre=/bin/bash -c 'rm -f %h/.openclaw/tradingview-browser/SingletonLock %h/.openclaw/tradingview-browser/SingletonSocket 2>/dev/null; rm -rf /tmp/.org.chromium.Chromium.* 2>/dev/null; mkdir -p %h/.openclaw/tradingview-browser'
 ExecStart=/usr/bin/chromium --remote-debugging-port=9222 --user-data-dir=%h/.openclaw/tradingview-browser --no-first-run --no-default-browser-check --disable-sync --disable-background-networking --password-store=basic https://www.tradingview.com/chart/
-Restart=on-failure
+Restart=always
 RestartSec=5
 Environment=DISPLAY=:0
 Environment=WAYLAND_DISPLAY=wayland-0
