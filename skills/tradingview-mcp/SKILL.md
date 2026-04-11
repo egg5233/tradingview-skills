@@ -95,6 +95,24 @@ tv timeframe W      # weekly
 tv timeframe M      # monthly
 ```
 
+**After ANY timeframe change, always reset the chart view to fit the window:**
+```bash
+tv ui keyboard r --alt    # Alt+R = reset/fit chart to screen
+```
+
+### ⚠️ Common Mistake: "last week" ≠ weekly timeframe
+
+When user says "analyze the last week", "this week's movement", or "過去一週的走勢":
+- ❌ Do NOT change timeframe to W (weekly) — this changes the candle size, not the date range
+- ✅ Keep current timeframe (e.g. 1H), pull enough bars to cover 7 days:
+  - 1H: `tv ohlcv -n 168` (7 × 24)
+  - 4H: `tv ohlcv -n 42` (7 × 6)
+  - 15min: `tv ohlcv -n 672` (7 × 24 × 4)
+- Or use `tv scroll` to jump to the start date
+
+Same applies to "last month" (≠ monthly timeframe), "last 3 days" (≠ 3D timeframe), etc.
+**"Time period" in user language = date range, NOT chart timeframe.**
+
 ### "Add RSI / Bollinger Bands"
 
 ⚠️ **Must use FULL indicator names. Abbreviations will fail.**
