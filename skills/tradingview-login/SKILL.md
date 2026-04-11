@@ -1,7 +1,7 @@
 ---
 name: tradingview-login
-version: "4.0.0"
-description: TradingView is managed as a system service. Browser is ALREADY RUNNING. Just use "tv status" to check. If login needed, use Playwright.
+version: "4.1.0"
+description: TradingView browser management and login. Browser runs as systemd service. Use check-login.sh to check status. If NOT_LOGGED_IN, offer login via Playwright.
 metadata:
   {
     "openclaw":
@@ -12,33 +12,34 @@ metadata:
   }
 ---
 
-# TradingView 連接與登入
+# TradingView Browser & Login
 
-## 重要：瀏覽器已經在跑
+## IMPORTANT: Browser is a System Service
 
-TradingView Chromium 是系統服務，**開機就自動啟動**。你不需要啟動瀏覽器。
-**禁止執行 chromium 命令。瀏覽器已經在跑了。**
+TradingView Chromium runs as a systemd service — it starts on boot and auto-restarts if closed.
+**Do NOT run chromium commands directly. The browser is already running.**
 
-## 流程
+## Workflow
 
-### 1. 檢查連接
+### 1. Check Connection Status
 
 ```bash
 bash ~/tradingview-mcp/check-login.sh
 ```
 
-| 結果 | 下一步 |
-|------|--------|
-| `LOGGED_IN` + `CDP_PORT:xxx` | 直接工作 |
-| `NOT_LOGGED_IN` + `CDP_PORT:xxx` | 問用戶要不要登入 |
-| `NO_BROWSER` | 執行 `systemctl --user start tradingview-chromium.service` 然後重試 |
-| `CHECK_FAILED` | 需要安裝（見第 3 步） |
+| Result | Next Step |
+|--------|-----------|
+| `LOGGED_IN` + `CDP_PORT:xxx` | Ready to work. Use that port. |
+| `NOT_LOGGED_IN` + `CDP_PORT:xxx` | Ask user if they want to login. |
+| `NO_BROWSER` | Run `systemctl --user start tradingview-chromium.service`, wait 8s, retry. |
+| `CHECK_FAILED` | First-time setup needed (see Step 3). |
 
-### 2. 登入（如果用戶要）
+### 2. Login (if user wants to)
 
-**A. 問帳密**（帳密只在本機用於登入，不會記錄）
+**A. Ask for credentials:**
+> Credentials are only used locally for login. They are never saved, logged, or transmitted.
 
-**B. 執行**（替換 EMAIL、PASSWORD、PORT）：
+**B. Execute login** (replace EMAIL, PASSWORD, PORT):
 ```bash
 python3 -c "
 import asyncio
@@ -75,7 +76,9 @@ asyncio.run(login())
 "
 ```
 
-**C. 2FA**（問用戶驗證碼）：
+**C. Handle result:**
+- `LOGIN_OK` → Login successful.
+- `2FA_REQUIRED` → Ask user for 6-digit code, then:
 ```bash
 python3 -c "
 import asyncio
@@ -94,13 +97,18 @@ asyncio.run(twofa())
 "
 ```
 
-### 3. 首次安裝
+### 3. First-Time Setup
 
 ```bash
 cd ~ && git clone --depth 1 https://github.com/tradesdontlie/tradingview-mcp.git && cd tradingview-mcp && npm install --production
 ```
 
-建立腳本和服務：
+Create scripts and systemd service:
 ```bash
 curl -sL https://raw.githubusercontent.com/egg5233/tradingview-skills/main/scripts/setup.sh | bash
 ```
+
+## Security
+
+- ❌ NEVER save, log, or transmit user credentials
+- ✅ Credentials are used only in the inline exec Python script, then discarded

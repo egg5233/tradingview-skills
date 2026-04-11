@@ -1,6 +1,6 @@
 ---
 name: tradingview-mcp
-version: "3.0.0"
+version: "3.1.0"
 description: TradingView chart control via CLI. Use when user asks about charts, indicators, price data, Pine Script, screenshots, or TradingView operations.
 metadata:
   {
@@ -12,236 +12,236 @@ metadata:
   }
 ---
 
-# TradingView 圖表控制
+# TradingView Chart Control
 
-通過 exec 執行 `tv` CLI 命令控制 TradingView。所有命令輸出 JSON。
+Control TradingView via `tv` CLI commands executed through exec. All output is JSON.
 
-## 命令格式
+## Command Format
 
 ```bash
 cd ~/tradingview-mcp && node src/cli/index.js <command> [options]
 ```
 
-## 前置安裝（首次使用）
+## First-Time Setup
 
 ```bash
 test -d ~/tradingview-mcp/src && echo "INSTALLED" || echo "NOT_INSTALLED"
 ```
-如果 `NOT_INSTALLED`：
+If `NOT_INSTALLED`:
 ```bash
 cd ~ && git clone --depth 1 https://github.com/tradesdontlie/tradingview-mcp.git && cd tradingview-mcp && npm install --production
 ```
 
 ---
 
-## 工作流指南
+## Workflow Guide — Match User Intent to Commands
 
-### 「看一下我的圖表」
-
-```bash
-tv status          # 標的、時間週期、圖表類型
-tv values          # 所有指標當前數值
-tv quote           # 即時報價
-```
-
-### 「完整分析」/ 「full analysis」
-
-按順序執行（同一批的可以並行）：
-
-**第 1 批（並行）**：
-```bash
-tv quote           # 即時報價
-tv ohlcv -s        # K 線摘要
-tv values          # 指標數值
-```
-
-**第 2 批（並行）**：
-```bash
-tv data lines      # Pine 指標的價位線
-tv data labels     # Pine 指標的文字標籤
-tv data tables     # Pine 指標的表格
-```
-
-**第 3 批**：
-```bash
-tv screenshot      # 截圖（然後上傳到 Giggle，見 AGENTS.md 規則 5）
-```
-
-用表格格式整理成報告，附上截圖 URL。
-
-### 「切換標的」
+### "What's on my chart?" / "Show me the current state"
 
 ```bash
-tv symbol AAPL                   # 美股
-tv symbol BINANCE:BTCUSDT        # 加密貨幣
-tv symbol ES1!                   # 期貨
-tv symbol NYMEX:CL1!             # 原油
+tv status          # symbol, timeframe, chart type
+tv values          # all visible indicator readings
+tv quote           # real-time price (OHLCV)
 ```
 
-切換後等 3 秒確認：
+### "Full analysis" / "Analyze this chart"
+
+Execute in order (batch where possible):
+
+**Batch 1 (parallel)**:
+```bash
+tv quote           # real-time price
+tv ohlcv -s        # OHLCV summary stats
+tv values          # all indicator readings
+```
+
+**Batch 2 (parallel)**:
+```bash
+tv data lines      # price levels drawn by Pine indicators
+tv data labels     # text labels from Pine indicators
+tv data tables     # table data from Pine indicators
+```
+
+**Batch 3**:
+```bash
+tv screenshot      # capture chart (then upload to Giggle per AGENTS.md Rule 5)
+```
+
+Format results as a structured report with tables. Include the screenshot URL.
+
+### "Show me XXX" / "Switch to AAPL"
+
+```bash
+tv symbol AAPL                   # US stocks
+tv symbol BINANCE:BTCUSDT        # crypto
+tv symbol ES1!                   # futures
+tv symbol NYMEX:CL1!             # crude oil futures
+```
+
+Wait 3 seconds after switching, then confirm:
 ```bash
 sleep 3 && tv status
 ```
 
-### 「切換時間週期」
+### "Switch to daily / 15 minute"
 
 ```bash
-tv timeframe 1      # 1 分鐘
-tv timeframe 5      # 5 分鐘
-tv timeframe 15     # 15 分鐘
-tv timeframe 60     # 1 小時
-tv timeframe D      # 日線
-tv timeframe W      # 週線
-tv timeframe M      # 月線
+tv timeframe 1      # 1 min
+tv timeframe 5      # 5 min
+tv timeframe 15     # 15 min
+tv timeframe 60     # 1 hour
+tv timeframe D      # daily
+tv timeframe W      # weekly
+tv timeframe M      # monthly
 ```
 
-### 「加指標」
+### "Add RSI / Bollinger Bands"
 
-⚠️ **必須用完整名稱，不能用縮寫。**
+⚠️ **Must use FULL indicator names. Abbreviations will fail.**
 
 ```bash
 tv indicator add "Relative Strength Index"                # RSI
 tv indicator add "Moving Average Exponential"             # EMA
 tv indicator add "Moving Average Convergence Divergence"  # MACD
-tv indicator add "Bollinger Bands"                        # 布林帶
-tv indicator add "Volume"                                 # 成交量
+tv indicator add "Bollinger Bands"                        # BB
+tv indicator add "Volume"                                 # Volume
 ```
 
-加完後等 2 秒再讀數值：
+Wait 2 seconds after adding before reading values:
 ```bash
 sleep 2 && tv values
 ```
 
-移除指標（先用 `tv state` 取得 entity ID）：
+To remove an indicator (get entity ID from `tv state` first):
 ```bash
-tv state                         # 取得 entity ID
-tv indicator remove ENTITY_ID    # 移除
+tv state                         # get entity IDs
+tv indicator remove ENTITY_ID    # remove by ID
 ```
 
-### 「K 線數據」
+### "Give me price data"
 
 ```bash
-tv ohlcv -s          # 摘要統計（⚠️ 優先用這個）
-tv ohlcv -n 20       # 最近 20 根
-tv ohlcv -n 100      # 最近 100 根
+tv ohlcv -s          # summary stats (⚠️ ALWAYS prefer this)
+tv ohlcv -n 20       # last 20 bars
+tv ohlcv -n 100      # last 100 bars
 ```
 
-### 「截圖」
+### "Take a screenshot"
 
 ```bash
-tv screenshot                    # 全畫面
-tv screenshot -r chart           # 只圖表
-tv screenshot -r strategy_tester # 只策略測試面板
+tv screenshot                    # full page
+tv screenshot -r chart           # chart area only
+tv screenshot -r strategy_tester # strategy tester only
 ```
 
-截圖後**必須上傳到 Giggle 再發給用戶**（見 AGENTS.md 規則 5）。
+After screenshot, **must upload to Giggle and send URL to user** (see AGENTS.md Rule 5).
 
-### 「Pine 指標數據」
+### "What are the Pine indicator levels?"
 
-自訂 Pine 指標用 `line.new()`、`label.new()` 畫的東西，`tv values` 看不到。用：
+Custom Pine indicators draw with `line.new()`, `label.new()`, etc. These are invisible to `tv values`. Use:
 
 ```bash
-tv data lines        # 價位線（去重、高→低排序）
-tv data labels       # 文字標籤（如「支撐 24550」）
-tv data tables       # 表格數據
-tv data boxes        # 價格區間
+tv data lines        # price levels (deduplicated, sorted high→low)
+tv data labels       # text labels (e.g. "Support 24550")
+tv data tables       # table data
+tv data boxes        # price zones/ranges
 ```
 
-### 「Pine Script 開發」
+### "Write Pine Script" / "Help me code an indicator"
 
 ```bash
-tv pine new indicator             # 新建指標
-tv pine set --file code.pine      # 注入代碼
-tv pine compile                   # 編譯（智能檢測）
-tv pine errors                    # 讀取錯誤
-tv pine console                   # 讀取 log 輸出
-tv pine save                      # 保存到雲端
-tv pine list                      # 列出已保存腳本
-tv pine open "Name"               # 打開腳本
+tv pine new indicator             # create new indicator
+tv pine set --file code.pine      # inject code
+tv pine compile                   # smart compile
+tv pine errors                    # read compilation errors
+tv pine console                   # read log.info() output
+tv pine save                      # save to TradingView cloud
+tv pine list                      # list saved scripts
+tv pine open "Name"               # open a saved script
 ```
 
-⚠️ **避免 `tv pine get`** — 複雜腳本可能返回 200KB+。
+⚠️ **Avoid `tv pine get`** on complex scripts — can return 200KB+.
 
-### 「回測」
+### "Backtest" / "Replay mode"
 
 ```bash
-tv replay start --date 2025-03-01    # 進入回放模式
-tv replay step                        # 前進一根 K 線
-tv replay autoplay                    # 自動播放
-tv replay trade buy                   # 買入
-tv replay trade sell                  # 賣出
-tv replay trade close                 # 平倉
-tv replay status                      # 持倉和盈虧
-tv replay stop                        # 結束，回到即時
+tv replay start --date 2025-03-01    # enter replay from date
+tv replay step                        # advance one bar
+tv replay autoplay                    # auto-advance
+tv replay trade buy                   # buy
+tv replay trade sell                  # sell
+tv replay trade close                 # close position
+tv replay status                      # position & P&L
+tv replay stop                        # exit replay, return to realtime
 ```
 
-### 「畫線」
+### "Draw on chart"
 
 ```bash
-tv draw shape horizontal_line --price 50000    # 水平線
-tv draw shape trend_line --point1 ... --point2 ...  # 趨勢線
-tv draw list                                    # 列出繪圖
-tv draw clear                                   # 清除全部
-tv draw remove ENTITY_ID                        # 移除單個
+tv draw shape horizontal_line --price 50000    # horizontal line
+tv draw shape trend_line --point1 ... --point2 ...  # trend line
+tv draw list                                    # list all drawings
+tv draw clear                                   # clear all
+tv draw remove ENTITY_ID                        # remove one
 ```
 
-### 「搜尋」
+### "Search for a symbol"
 
 ```bash
-tv search bitcoin        # 搜索標的
-tv info                   # 當前標的詳細信息
+tv search bitcoin        # search
+tv info                   # detailed info on current symbol
 ```
 
-### 「多窗格 / 標籤」
+### "Multi-pane / tabs"
 
 ```bash
-tv pane layout 2x2        # 2x2 佈局
-tv tab list               # 列出標籤頁
-tv tab new                # 新增標籤頁
-tv tab switch INDEX       # 切換
+tv pane layout 2x2        # set 2x2 layout
+tv tab list               # list tabs
+tv tab new                # new tab
+tv tab switch INDEX       # switch tab
 ```
 
-### 「跳轉日期」
+### "Jump to a date"
 
 ```bash
-tv scroll 2025-01-15      # ISO 格式日期
+tv scroll 2025-01-15      # ISO format date
 ```
 
-### 「UI 面板」
+### "UI panels"
 
 ```bash
-tv ui panel pine-editor          # 開啟/關閉 Pine 編輯器
-tv ui panel strategy-tester      # 開啟/關閉策略測試器
-tv ui panel watchlist            # 開啟/關閉自選列表
-tv ui fullscreen                 # 全螢幕
+tv ui panel pine-editor          # toggle Pine editor
+tv ui panel strategy-tester      # toggle strategy tester
+tv ui panel watchlist            # toggle watchlist
+tv ui fullscreen                 # toggle fullscreen
 ```
 
 ---
 
-## Context 管理規則
+## Context Management Rules
 
-1. **永遠用 `tv ohlcv -s`**（摘要），除非用戶要個別 K 線
-2. **善用 `tv screenshot`** 代替大量數據 — 一張圖勝千字
-3. K 線用 `-n 20` 控制數量
-4. **避免 `tv pine get`** 在複雜腳本上
-5. `tv state` 跑一次就好，不要重複
+1. **Always use `tv ohlcv -s`** (summary) unless user explicitly wants individual bars
+2. **Use `tv screenshot`** instead of pulling large datasets — one image beats 1000 words
+3. Cap bar count with `-n 20` for quick analysis
+4. **Avoid `tv pine get`** on complex scripts (200KB+)
+5. Run `tv state` once to get entity IDs — don't repeat
 
-## 輸出大小參考
+## Output Size Reference
 
-| 命令 | 輸出大小 |
-|------|---------|
+| Command | Approx Size |
+|---------|-------------|
 | `tv quote` | ~200 bytes |
 | `tv values` | ~500 bytes |
 | `tv ohlcv -s` | ~500 bytes |
 | `tv ohlcv -n 20` | ~1.5 KB |
 | `tv data lines` | ~1-3 KB |
 | `tv data labels` | ~2-5 KB |
-| `tv screenshot` | ~300 bytes（返回檔案路徑） |
+| `tv screenshot` | ~300 bytes (returns file path) |
 
-## 注意事項
+## Important Notes
 
-- 所有命令輸出 JSON：`{ "success": true/false, ... }`
-- Entity ID 從 `tv state` 取得，跨 session 無效
-- Pine 指標必須**在圖表上可見**才能讀取
-- 指標名必須用**完整名稱**
-- 截圖保存在 `~/tradingview-mcp/screenshots/`
+- All commands output JSON: `{ "success": true/false, ... }`
+- Entity IDs from `tv state` are session-scoped — don't cache across sessions
+- Pine indicators must be **visible on chart** to read their data
+- Indicator names must be **full names** — abbreviations fail
+- Screenshots save to `~/tradingview-mcp/screenshots/`
