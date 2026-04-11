@@ -70,12 +70,14 @@ After=graphical-session.target
 [Service]
 Type=simple
 ExecStartPre=/bin/bash -c 'rm -f %h/.openclaw/tradingview-browser/SingletonLock %h/.openclaw/tradingview-browser/SingletonSocket 2>/dev/null; rm -rf /tmp/.org.chromium.Chromium.* 2>/dev/null; mkdir -p %h/.openclaw/tradingview-browser'
-ExecStart=/usr/bin/chromium --remote-debugging-port=9222 --user-data-dir=%h/.openclaw/tradingview-browser --no-first-run --no-default-browser-check --disable-sync --disable-background-networking --password-store=basic https://www.tradingview.com/chart/
+ExecStart=/usr/bin/chromium --remote-debugging-port=9222 --user-data-dir=%h/.openclaw/tradingview-browser --no-first-run --no-default-browser-check --disable-sync --disable-background-networking --disable-dev-shm-usage --disable-component-update --disable-features=Translate,MediaRouter --disable-session-crashed-bubble --hide-crash-restore-bubble --password-store=basic https://www.tradingview.com/chart/
 Restart=always
 RestartSec=5
 Environment=DISPLAY=:0
 Environment=WAYLAND_DISPLAY=wayland-0
 Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
+Environment=XDG_SESSION_TYPE=tty
 
 [Install]
 WantedBy=default.target
@@ -120,4 +122,4 @@ echo "✅ CDP port patched"
 echo ""
 echo "=== SETUP COMPLETE ==="
 echo "TradingView Chromium is now a system service."
-echo "It will auto-start on boot and restart on crash."
+echo "It will auto-start on boot and restart if closed."
